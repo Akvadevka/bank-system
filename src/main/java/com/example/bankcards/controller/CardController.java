@@ -7,6 +7,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.example.bankcards.dto.TransferRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 
 import java.util.List;
 
@@ -31,8 +34,8 @@ public class CardController {
     }
 
     @GetMapping
-    public ResponseEntity<List<CardResponse>> getAllCards() {
-        List<CardResponse> cards = cardService.getAllCardsForCurrentUser();
+    public ResponseEntity<Page<CardResponse>> getAllCards(@PageableDefault(size = 10) Pageable pageable) {
+        Page<CardResponse> cards = cardService.getAllCardsForCurrentUser(pageable);
         return ResponseEntity.ok(cards);
     }
 

@@ -12,4 +12,5 @@ public interface BankCardRepository extends JpaRepository<Card, Long> {
     Page<Card> findAllByOwnerId(Long ownerId, Pageable pageable);
     Optional<Card> findByIdAndOwnerId(Long cardId, Long ownerId);
     List<Card> findAllByOwnerId(Long ownerId);
+    Page<Card> findAll(Pageable pageable);
 }

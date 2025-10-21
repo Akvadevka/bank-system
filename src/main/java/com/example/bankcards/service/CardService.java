@@ -13,6 +13,8 @@ import com.example.bankcards.service.EncryptionService;
 import org.springframework.stereotype.Service;
 import com.example.bankcards.dto.TransferRequest;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -43,6 +45,11 @@ public class CardService {
                 .orElseThrow(() -> new UsernameNotFoundException("Authenticated user not found in DB: " + username));
     }
 
+    public Page<CardResponse> getAllCards(Pageable pageable) {
+        Page<Card> cardsPage = cardRepository.findAll(pageable);
+        return cardsPage.map(this::convertToResponseDto);
+    }
+
     public CardResponse createCard(CreateCardRequest request) {
         try {
             User owner = getCurrentUser();
@@ -62,12 +69,10 @@ public class CardService {
         }
     }
 
-    public List<CardResponse> getAllCardsForCurrentUser() {
+    public Page<CardResponse> getAllCardsForCurrentUser(Pageable pageable) {
         User owner = getCurrentUser();
-        List<Card> cards = cardRepository.findAllByOwnerId(owner.getId());
-        return cards.stream()
-                .map(this::convertToResponseDto)
-                .collect(Collectors.toList());
+        Page<Card> cardsPage = cardRepository.findAllByOwnerId(owner.getId(), pageable);
+        return cardsPage.map(this::convertToResponseDto);
     }
 
     public CardResponse updateCardStatus(Long cardId, CardStatus newStatus) {
@@ -146,5 +151,12 @@ public class CardService {
         return "Transfer successful: " + amount + " transferred from " +
                 maskCardNumber(encryptionService.decrypt(sourceCard.getCardNumberEncrypted())) +
                 " to " + maskCardNumber(encryptionService.decrypt(destinationCard.getCardNumberEncrypted()));
+    }
+
+    public void deleteCardById(Long cardId) {
+        if (!cardRepository.existsById(cardId)) {
+            throw new RuntimeException("Card not found with ID: " + cardId);
+        }
+        cardRepository.deleteById(cardId);
     }
 }
