@@ -11,7 +11,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import com.example.bankcards.service.EncryptionService;
 import org.springframework.stereotype.Service;
+import com.example.bankcards.dto.TransferRequest;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.util.Optional;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -97,5 +101,50 @@ public class CardService {
         } catch (Exception e) {
             throw new RuntimeException("Error during card number decryption: " + e.getMessage(), e);
         }
+    }
+
+    private Optional<Card> findCardByPlainNumber(String plainNumber) throws Exception {
+        List<Card> allCards = cardRepository.findAll();
+        for (Card card : allCards) {
+            String decryptedNumber = encryptionService.decrypt(card.getCardNumberEncrypted());
+            if (decryptedNumber.equals(plainNumber)) {
+                return Optional.of(card);
+            }
+        }
+        return Optional.empty();
+    }
+
+    @Transactional
+    public String transferFunds(TransferRequest request) throws Exception {
+        User currentUser = getCurrentUser();
+        BigDecimal amount = request.getAmount();
+
+        Card sourceCard = findCardByPlainNumber(request.getSourceCardNumber())
+                .orElseThrow(() -> new RuntimeException("Source card not found."));
+
+        Card destinationCard = findCardByPlainNumber(request.getDestinationCardNumber())
+                .orElseThrow(() -> new RuntimeException("Destination card not found."));
+
+        if (!sourceCard.getOwner().equals(currentUser)) {
+            throw new RuntimeException("Access denied: You can only transfer funds from your own card.");
+        }
+
+        if (sourceCard.getBalance().compareTo(amount) < 0) {
+            throw new RuntimeException("Insufficient balance on the source card.");
+        }
+
+        if (sourceCard.getStatus() != CardStatus.ACTIVE) {
+            throw new RuntimeException("Source card is not active.");
+        }
+
+        sourceCard.setBalance(sourceCard.getBalance().subtract(amount));
+        cardRepository.save(sourceCard);
+
+        destinationCard.setBalance(destinationCard.getBalance().add(amount));
+        cardRepository.save(destinationCard);
+
+        return "Transfer successful: " + amount + " transferred from " +
+                maskCardNumber(encryptionService.decrypt(sourceCard.getCardNumberEncrypted())) +
+                " to " + maskCardNumber(encryptionService.decrypt(destinationCard.getCardNumberEncrypted()));
     }
 }
