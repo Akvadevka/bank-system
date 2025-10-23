@@ -1,7 +1,3 @@
-# Конфигурация для тестового задания.
-# Сделала упрощенно, без .env. НО в реальном проекте пароли и секреты хранятся в переменных окружения.
-
-
 server:
   port: 8080
 
@@ -14,7 +10,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update  # временно, чтобы база сама создалась
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
@@ -24,8 +20,12 @@ spring:
     change-log: classpath:db/migration/db.changelog-master.yaml
 
 jwt:
-  secret: mysecretkey123456789
-  expiration: 3600000
+  secret: G3i3f49Fj5P2O7s0A9t7S0y3Y4H8u1J1L2p5K9l3M8n0B5q2R7v9T4w1X6z0C4d3E5h7I8k6M
+  expiration:
+    ms: 3600000
+  refresh:
+    expiration:
+      ms: 604800000
 
 springdoc:
   api-docs:
@@ -35,4 +35,4 @@ springdoc:
     path: /swagger-ui.html
 
 app:
-  encryption-key: JiCg3EjENoPuI7uEDWZsZw==
+  encryption-key: G3i3f49Fj5P2O7s0A9t7S0y3Y4H8u1J1L2p5K9l3M8n0B5q2R7v9T4w1X6z0C4d3E5h7I8k6M

@@ -19,21 +19,34 @@ public class JwtTokenProvider {
     @Value("${jwt.expiration.ms}")
     private int jwtExpirationMs;
 
+    @Value("${jwt.refresh.expiration.ms}")
+    private int jwtRefreshExpirationMs;
+
     private Key key() {
+        byte[] decodedKey = Decoders.BASE64.decode(jwtSecret);
+        System.err.println("JWT DEBUG: Key length (bits): " + (decodedKey.length * 8));
         return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
     }
 
-    public String generateToken(Authentication authentication) {
+    private String doGenerateToken(Authentication authentication, int expirationMs) {
         String username = authentication.getName();
         Date currentDate = new Date();
-        Date expireDate = new Date(currentDate.getTime() + jwtExpirationMs);
+        Date expireDate = new Date(currentDate.getTime() + expirationMs);
 
         return Jwts.builder()
                 .setSubject(username)
                 .setIssuedAt(new Date())
                 .setExpiration(expireDate)
-                .signWith(key(), SignatureAlgorithm.HS512)
+                .signWith(key(), SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    public String generateToken(Authentication authentication) {
+        return doGenerateToken(authentication, jwtExpirationMs);
+    }
+
+    public String generateRefreshToken(Authentication authentication) {
+        return doGenerateToken(authentication, jwtRefreshExpirationMs);
     }
 
     public String getUsername(String token) {

@@ -32,7 +32,9 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres_db:5432/bankcards
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
-      JWT_SECRET: mysecretkey123456789
+      JWT_SECRET: G3i3f49Fj5P2O7s0A9t7S0y3Y4H8u1J1L2p5K9l3M8n0B5q2R7v9T4w1X6z0C4d3E5h7I8k6M
+      JWT_EXPIRATION_MS: 3600000
+      JWT_REFRESH_EXPIRATION_MS: 604800000
 
 volumes:
   postgres_data:
