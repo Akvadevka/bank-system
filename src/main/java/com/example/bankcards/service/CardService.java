@@ -1,7 +1,8 @@
 package com.example.bankcards.service;
 
 import com.example.bankcards.dto.CardResponse;
-import com.example.bankcards.dto.CreateCardRequest;
+import com.example.bankcards.dto.BalanceResponse;
+import com.example.bankcards.dto.AdminCreateCardRequest;
 import com.example.bankcards.entity.Card;
 import com.example.bankcards.entity.CardStatus;
 import com.example.bankcards.entity.User;
@@ -9,17 +10,16 @@ import com.example.bankcards.repository.BankCardRepository;
 import com.example.bankcards.repository.UserRepository;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import com.example.bankcards.service.EncryptionService;
 import org.springframework.stereotype.Service;
 import com.example.bankcards.dto.TransferRequest;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class CardService {
@@ -45,14 +45,49 @@ public class CardService {
                 .orElseThrow(() -> new UsernameNotFoundException("Authenticated user not found in DB: " + username));
     }
 
+    private Card findCardAndVerifyOwner(Long cardId) {
+        User currentUser = getCurrentUser();
+
+        Card card = cardRepository.findById(cardId)
+                .orElseThrow(() -> new RuntimeException("Card not found with ID: " + cardId));
+
+        if (!card.getOwner().equals(currentUser)) {
+            throw new AccessDeniedException("Access denied: Card does not belong to the current user.");
+        }
+        return card;
+    }
+
+    public CardResponse getCardByIdForCurrentUser(Long cardId) {
+        Card card = findCardAndVerifyOwner(cardId);
+        return convertToResponseDto(card);
+    }
+
+    public BalanceResponse getCardBalanceForCurrentUser(Long cardId) {
+        Card card = findCardAndVerifyOwner(cardId);
+
+        try {
+            String plainNumber = encryptionService.decrypt(card.getCardNumberEncrypted());
+
+            BalanceResponse response = new BalanceResponse();
+            response.setBalance(card.getBalance());
+            response.setMaskedCardNumber(maskCardNumber(plainNumber));
+
+            return response;
+        } catch (Exception e) {
+            throw new RuntimeException("Error fetching card balance: " + e.getMessage(), e);
+        }
+    }
+
     public Page<CardResponse> getAllCards(Pageable pageable) {
         Page<Card> cardsPage = cardRepository.findAll(pageable);
         return cardsPage.map(this::convertToResponseDto);
     }
 
-    public CardResponse createCard(CreateCardRequest request) {
+    public CardResponse createCardForUser(AdminCreateCardRequest request) {
         try {
-            User owner = getCurrentUser();
+            User owner = userRepository.findById(request.getUserId())
+                    .orElseThrow(() -> new RuntimeException("User not found with ID: " + request.getUserId()));
+
             String encryptedNumber = encryptionService.encrypt(request.getCardNumber());
 
             Card card = new Card();
@@ -65,7 +100,7 @@ public class CardService {
             Card savedCard = cardRepository.save(card);
             return convertToResponseDto(savedCard);
         } catch (Exception e) {
-            throw new RuntimeException("Error during card number encryption: " + e.getMessage(), e);
+            throw new RuntimeException("Error during card creation: " + e.getMessage(), e);
         }
     }
 
@@ -76,14 +111,7 @@ public class CardService {
     }
 
     public CardResponse updateCardStatus(Long cardId, CardStatus newStatus) {
-        User currentUser = getCurrentUser();
-
-        Card card = cardRepository.findById(cardId)
-                .orElseThrow(() -> new RuntimeException("Card not found with ID: " + cardId));
-
-        if (!card.getOwner().equals(currentUser)) {
-            throw new RuntimeException("Access denied: Card does not belong to the current user.");
-        }
+        Card card = findCardAndVerifyOwner(cardId);
 
         card.setStatus(newStatus);
         Card updatedCard = cardRepository.save(card);
@@ -158,5 +186,14 @@ public class CardService {
             throw new RuntimeException("Card not found with ID: " + cardId);
         }
         cardRepository.deleteById(cardId);
+    }
+
+    public CardResponse adminUpdateCardStatus(Long cardId, CardStatus newStatus) {
+        Card card = cardRepository.findById(cardId)
+                .orElseThrow(() -> new RuntimeException("Card not found with ID: " + cardId));
+        card.setStatus(newStatus);
+        Card updatedCard = cardRepository.save(card);
+
+        return convertToResponseDto(updatedCard);
     }
 }

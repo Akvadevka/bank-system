@@ -1,7 +1,8 @@
 package com.example.bankcards.controller;
 
+import com.example.bankcards.dto.BalanceResponse;
 import com.example.bankcards.dto.CardResponse;
-import com.example.bankcards.dto.CreateCardRequest;
+import com.example.bankcards.dto.AdminCreateCardRequest;
 import com.example.bankcards.service.CardService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -10,8 +11,6 @@ import com.example.bankcards.dto.TransferRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/cards")
@@ -23,13 +22,23 @@ public class CardController {
         this.cardService = cardService;
     }
 
-    @PostMapping
-    public ResponseEntity<CardResponse> createCard(@RequestBody CreateCardRequest request) {
+    @GetMapping("/{cardId}")
+    public ResponseEntity<CardResponse> getCardDetails(@PathVariable Long cardId) {
         try {
-            CardResponse response = cardService.createCard(request);
-            return new ResponseEntity<>(response, HttpStatus.CREATED);
+            CardResponse card = cardService.getCardByIdForCurrentUser(cardId);
+            return ResponseEntity.ok(card);
         } catch (RuntimeException e) {
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @GetMapping("/{cardId}/balance")
+    public ResponseEntity<BalanceResponse> getCardBalance(@PathVariable Long cardId) {
+        try {
+            BalanceResponse balance = cardService.getCardBalanceForCurrentUser(cardId);
+            return ResponseEntity.ok(balance);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
         }
     }
 

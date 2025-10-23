@@ -1,0 +1,27 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-insert-initial-admin
+      author: setup_v2
+      changes:
+        - insert:
+            tableName: app_user
+            columns:
+              - column:
+                  name: id
+                  value: 100
+              - column:
+                  name: username
+                  value: admin
+              - column:
+                  name: password
+                  value: "$2a$10$6ysIA5GpkCroYnu3IoIm9eVaZBdAQR3KJIF4GGBK.5DgWtxmWcHAm"
+
+        - insert:
+            tableName: user_role
+            columns:
+              - column:
+                  name: user_id
+                  value: 100
+              - column:
+                  name: roles
+                  value: ADMIN

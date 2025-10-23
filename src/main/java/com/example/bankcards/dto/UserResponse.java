@@ -10,7 +10,6 @@ public class UserResponse {
     private Long id;
     private String username;
     private Collection<Role> roles;
-    private LocalDateTime createdAt;
 
     public UserResponse(Long id, String username, Collection<Role> roles) {
         this.id = id;
